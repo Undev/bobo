@@ -171,7 +171,6 @@ public class BoboIndexReader extends FilterIndexReader
 	} catch (Exception e) {
 		return 0L;
 	} 
-  }
 
   public IndexReader getInnerReader()
   {
@@ -458,14 +457,7 @@ public class BoboIndexReader extends FilterIndexReader
         FSDirectory fsDir = (FSDirectory) idxDir;
         File file = fsDir.getFile();
 
-        if (new File(file, SPRING_CONFIG).exists())
-        {
-          facetHandlers = loadFromIndex(file,_workArea);
-        }
-        else
-        {
-          facetHandlers = new ArrayList<FacetHandler<?>>();
-        }
+        facetHandlers = new ArrayList<FacetHandler<?>>();
       }
       else
       {
