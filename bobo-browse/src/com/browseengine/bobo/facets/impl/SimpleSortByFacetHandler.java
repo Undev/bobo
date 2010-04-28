@@ -98,7 +98,6 @@ public class SimpleSortByFacetHandler extends SimpleFacetHandler implements Face
         }
 
         public List<BrowseFacet> getFacets() {
-            logger.debug("SortbyFacetCountCollector/getFacets");
               if (_ospec!=null)
               {
                   int minCount=_ospec.getMinHitCount();
@@ -108,7 +107,6 @@ public class SimpleSortByFacetHandler extends SimpleFacetHandler implements Face
                   List<BrowseFacet> facetColl;
                   List<String> valList=_dataCache.valArray;
                   FacetSortSpec sortspec = _ospec.getOrderBy();
-                  logger.debug("SortbyFacetCountCollector/getFacets sortSpec = " + _ospec.getOrderBy());
                   if (sortspec == FacetSortSpec.OrderValueAsc) {
                       facetColl=new ArrayList<BrowseFacet>(max);
                       for (int i = 1; i < _count.length;++i) // exclude zero
@@ -123,7 +121,6 @@ public class SimpleSortByFacetHandler extends SimpleFacetHandler implements Face
                       }
                   }
                   else {
-                      logger.debug("SortbyFacetCountCollector/getFacets sortSpec = " + _ospec.getOrderBy());
                       ComparatorFactory comparatorFactory;
                       if (sortspec == FacetSortSpec.OrderHitsDesc){
                           comparatorFactory = new FacetHitcountComparatorFactory();
@@ -133,7 +130,6 @@ public class SimpleSortByFacetHandler extends SimpleFacetHandler implements Face
                       if (comparatorFactory == null){
                           throw new IllegalArgumentException("facet comparator factory not specified");
                       }
-                      logger.debug("SortbyFacetCountCollector/getFacets comparatorFactory = " + comparatorFactory);
 
                       final Comparator<Integer> comparator = comparatorFactory.newComparator(new FieldValueAccessor(){
 
