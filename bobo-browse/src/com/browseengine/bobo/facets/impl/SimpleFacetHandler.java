@@ -1,8 +1,6 @@
 package com.browseengine.bobo.facets.impl;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -19,13 +17,12 @@ import com.browseengine.bobo.facets.FacetHandler;
 import com.browseengine.bobo.facets.data.FacetDataCache;
 import com.browseengine.bobo.facets.data.TermListFactory;
 import com.browseengine.bobo.facets.filter.AdaptiveFacetFilter;
+import com.browseengine.bobo.facets.filter.AdaptiveFacetFilter.FacetDataCacheBuilder;
 import com.browseengine.bobo.facets.filter.EmptyFilter;
 import com.browseengine.bobo.facets.filter.FacetFilter;
 import com.browseengine.bobo.facets.filter.FacetOrFilter;
 import com.browseengine.bobo.facets.filter.RandomAccessFilter;
 import com.browseengine.bobo.facets.filter.RandomAccessNotFilter;
-import com.browseengine.bobo.facets.filter.RandomAccessOrFilter;
-import com.browseengine.bobo.facets.filter.AdaptiveFacetFilter.FacetDataCacheBuilder;
 import com.browseengine.bobo.query.scoring.BoboDocScorer;
 import com.browseengine.bobo.query.scoring.FacetScoreable;
 import com.browseengine.bobo.query.scoring.FacetTermScoringFunctionFactory;
@@ -35,9 +32,9 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 {
 	private static Logger logger = Logger.getLogger(SimpleFacetHandler.class);
 	
-	private final TermListFactory _termListFactory;
-	private final String _indexFieldName;
-	
+    protected final TermListFactory _termListFactory;
+    protected final String _indexFieldName;
+
 	public SimpleFacetHandler(String name,String indexFieldName,TermListFactory termListFactory,Set<String> dependsOn)
 	{
 	   super(name,dependsOn);
@@ -54,22 +51,22 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 	{
 	   this(name,indexFieldName,termListFactory,null);
 	}
-	
+
 	public SimpleFacetHandler(String name,TermListFactory termListFactory)
     {
         this(name,name,termListFactory);
     }
-	
+
 	public SimpleFacetHandler(String name)
     {
         this(name,name,null);
     }
-	
+
 	public SimpleFacetHandler(String name,String indexFieldName)
 	{
 		this(name,indexFieldName,null);
 	}
-	
+
 	@Override
 	public DocComparatorSource getDocComparatorSource() {
 		return new FacetDataCache.FacetDocComparatorSource(this);
@@ -86,7 +83,7 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 		FacetDataCache dataCache = getFacetData(reader);
 		return new Object[]{dataCache.valArray.getRawValue(dataCache.orderArray.get(id))};
 	}
-	
+
   @Override
   public RandomAccessFilter buildRandomAccessFilter(String value, Properties prop) throws IOException
   {
@@ -124,7 +121,7 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
   public RandomAccessFilter buildRandomAccessOrFilter(String[] vals,Properties prop,boolean isNot) throws IOException
   {
     RandomAccessFilter filter = null;
-    
+
     if(vals.length > 1)
     {
       RandomAccessFilter f = new FacetOrFilter(this,vals,false);
@@ -168,7 +165,7 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 				BoboIndexReader reader, int docBase) {
 			FacetDataCache dataCache = SimpleFacetHandler.this.getFacetData(reader);
 			return new SimpleFacetCountCollector(_name,dataCache,docBase,sel,ospec);
-		}  
+		}
 	  };
 	}
 
@@ -178,37 +175,37 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 		dataCache.load(_indexFieldName, reader, _termListFactory);
 		return dataCache;
 	}
-	
+
 	public BoboDocScorer getDocScorer(BoboIndexReader reader,FacetTermScoringFunctionFactory scoringFunctionFactory,Map<String,Float> boostMap){
 		FacetDataCache dataCache = getFacetData(reader);
 		float[] boostList = BoboDocScorer.buildBoostList(dataCache.valArray, boostMap);
 		return new SimpleBoboDocScorer(dataCache,scoringFunctionFactory,boostList);
 	}
-	
+
 	public static final class SimpleFacetCountCollector extends DefaultFacetCountCollector
 	{
 		public SimpleFacetCountCollector(String name,FacetDataCache dataCache,int docBase,BrowseSelection sel,FacetSpec ospec)
 		{
 		    super(name,dataCache,docBase,sel,ospec);
 		}
-		
+
 		public final void collect(int docid) {
 			_count[_array.get(docid)]++;
 		}
-		
+
 		public final void collectAll() {
 		  _count = _dataCache.freqs;
 		}
 	}
-	
+
 	public static final class SimpleBoboDocScorer extends BoboDocScorer{
 		private final FacetDataCache _dataCache;
-		
+
 		public SimpleBoboDocScorer(FacetDataCache dataCache,FacetTermScoringFunctionFactory scoreFunctionFactory,float[] boostList){
 			super(scoreFunctionFactory.getFacetTermScoringFunction(dataCache.valArray.size(), dataCache.orderArray.size()),boostList);
 			_dataCache = dataCache;
 		}
-		
+
 		@Override
 		public Explanation explain(int doc){
 			int idx = _dataCache.orderArray.get(doc);
