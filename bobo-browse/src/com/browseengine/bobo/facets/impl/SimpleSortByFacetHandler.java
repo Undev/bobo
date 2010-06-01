@@ -10,11 +10,10 @@ import com.browseengine.bobo.api.FacetSpec.FacetSortSpec;
 import com.browseengine.bobo.facets.FacetCountCollector;
 import com.browseengine.bobo.facets.FacetCountCollectorSource;
 import com.browseengine.bobo.facets.FacetHandler;
-import com.browseengine.bobo.facets.FacetHandlerFactory;
 import com.browseengine.bobo.facets.data.FacetDataCache;
 import com.browseengine.bobo.util.BoundedPriorityQueue;
 
-public class SimpleSortByFacetHandler extends SimpleFacetHandler implements FacetHandlerFactory<SimpleFacetHandler>{
+public class SimpleSortByFacetHandler extends SimpleFacetHandler {
 	private final String _sortByField;
 	private SimpleFacetHandler _sortByFacetHandler;
     private static Logger logger = Logger.getLogger(SimpleSortByFacetHandler.class);

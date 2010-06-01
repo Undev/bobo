@@ -6,14 +6,23 @@ import com.browseengine.bobo.api.BrowseFacet;
 import com.browseengine.bobo.api.ComparatorFactory;
 import com.browseengine.bobo.api.FieldValueAccessor;
 import com.browseengine.bobo.api.SortByBrowseFacet;
+import com.browseengine.bobo.util.IntBoundedPriorityQueue.IntComparator;
 
 public class FacetSortByComparatorFactory implements ComparatorFactory {
-	public Comparator<Integer> newComparator(final FieldValueAccessor valueList,
+
+	public IntComparator newComparator(final FieldValueAccessor valueList,
 			final int[] counts) {
-        return new Comparator<Integer>(){
-            public int compare(Integer o1, Integer o2) {
-                return valueList.getFormatedValue(o1).compareTo(valueList.getFormatedValue(o2));
-            }
+        return new IntComparator(){
+
+          public int compare(Integer f1, Integer f2) {
+              return valueList.getFormatedValue(f1).compareTo(valueList.getFormatedValue(f2));
+          }
+
+          // use polymorphism to avoid auto-boxing
+          public int compare(int f1, int f2)
+          {
+              return valueList.getFormatedValue(f1).compareTo(valueList.getFormatedValue(f2));
+          }
         };
 	}
 

@@ -5,15 +5,21 @@ import java.util.Comparator;
 import com.browseengine.bobo.api.BrowseFacet;
 import com.browseengine.bobo.api.ComparatorFactory;
 import com.browseengine.bobo.api.FieldValueAccessor;
-import org.apache.log4j.Logger;
+import com.browseengine.bobo.util.IntBoundedPriorityQueue.IntComparator;
 
 public class FacetValueDescComparatorFactory implements ComparatorFactory {
-	public Comparator<Integer> newComparator(FieldValueAccessor valueList,
+	public IntComparator newComparator(FieldValueAccessor valueList,
 			final int[] counts) {
-        return new Comparator<Integer>(){
+        return new IntComparator(){
             public int compare(Integer o1, Integer o2) {
-                return o2-o1;
+                return o1 - o2;
             }
+            @SuppressWarnings("unused")
+            // use polymorphism to avoid auto-boxing
+            public int compare(int o1, int o2) {
+              return o1 - o2;
+            }
+
         };
 	}
 
