@@ -151,6 +151,12 @@ public class BoboIndexReader extends FilterIndexReader
   }
 
   public static BoboIndexReader getInstanceAsSubReader(IndexReader reader,
+                                                       Collection<FacetHandler<?>> facetHandlers) throws IOException
+  {
+    return getInstanceAsSubReader(reader, facetHandlers, null, new WorkArea());
+  }
+
+  public static BoboIndexReader getInstanceAsSubReader(IndexReader reader,
                                                        Collection<FacetHandler<?>> facetHandlers,
                                                        Collection<RuntimeFacetHandlerFactory<?,?>> facetHandlerFactories,
                                                        WorkArea workArea) throws IOException
