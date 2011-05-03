@@ -177,6 +177,7 @@ public class BoboIndexReader extends FilterIndexReader
 	} catch (Exception e) {
 		return 0L;
 	} 
+  }
 
   public IndexReader getInnerReader()
   {

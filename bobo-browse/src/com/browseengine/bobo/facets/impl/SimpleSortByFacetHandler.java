@@ -1,15 +1,28 @@
 package com.browseengine.bobo.facets.impl;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.browseengine.bobo.api.*;
+import com.browseengine.bobo.api.BoboIndexReader;
+import com.browseengine.bobo.api.BrowseFacet;
+import com.browseengine.bobo.api.BrowseSelection;
+import com.browseengine.bobo.api.ComparatorFactory;
+import com.browseengine.bobo.api.FacetAccessible;
+import com.browseengine.bobo.api.FacetIterator;
+import com.browseengine.bobo.api.FacetSpec;
 import com.browseengine.bobo.api.FacetSpec.FacetSortSpec;
+import com.browseengine.bobo.api.FieldValueAccessor;
+import com.browseengine.bobo.api.SortByBrowseFacet;
 import com.browseengine.bobo.facets.FacetCountCollector;
 import com.browseengine.bobo.facets.FacetCountCollectorSource;
 import com.browseengine.bobo.facets.FacetHandler;
+import com.browseengine.bobo.facets.SortByCombinedFacetAccessible;
+import com.browseengine.bobo.facets.SortByFacetIterator;
 import com.browseengine.bobo.facets.data.FacetDataCache;
 import com.browseengine.bobo.util.BoundedPriorityQueue;
 
@@ -56,6 +69,12 @@ public class SimpleSortByFacetHandler extends SimpleFacetHandler {
 
         };
     }
+
+  @Override
+  public FacetAccessible merge(FacetSpec fspec, List<FacetAccessible> facetList)
+  {
+    return new SortByCombinedFacetAccessible(fspec, facetList);
+  }
 
     private static final class SortbyFacetCountCollector extends DefaultFacetCountCollector	{
         private final DefaultFacetCountCollector _subcollector;
@@ -182,5 +201,10 @@ public class SimpleSortByFacetHandler extends SimpleFacetHandler {
               }
           }
 
+    @Override
+    public FacetIterator iterator()
+    {
+      return new SortByFacetIterator(_dataCache, _subcollector._dataCache, _count, _countlength, false);
+    };
 	}
 }

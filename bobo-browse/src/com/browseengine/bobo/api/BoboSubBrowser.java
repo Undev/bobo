@@ -24,7 +24,6 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.Weight;
 
-import com.browseengine.bobo.facets.CombinedFacetAccessible;
 import com.browseengine.bobo.facets.FacetCountCollector;
 import com.browseengine.bobo.facets.FacetHandler;
 import com.browseengine.bobo.facets.FacetHandlerInitializerParam;
@@ -376,7 +375,8 @@ public class BoboSubBrowser extends BoboSearcher2 implements Browsable,Closeable
               for (FacetCountCollector fc : resultcollector){
                 finalList.add((FacetAccessible)fc);
               }
-        	  CombinedFacetAccessible combinedCollector = new CombinedFacetAccessible(fspec, finalList);
+              FacetAccessible combinedCollector = facetCollector.facetHandler
+                  .merge(fspec, finalList);
               facetMap.put(name, combinedCollector);
         	}
           }

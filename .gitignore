@@ -23,3 +23,6 @@ logs/
 tools-build/
 **/out/
 cardemo/cars.war
+bobo-browse/.classpath
+bobo-browse/.project
+
