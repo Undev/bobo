@@ -2,6 +2,8 @@ package com.browseengine.bobo.facets;
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 
+import org.apache.log4j.Logger;
+
 import com.browseengine.bobo.api.FacetIterator;
 import com.browseengine.bobo.facets.data.FacetDataCache;
 import com.browseengine.bobo.facets.data.TermValueList;
@@ -10,21 +12,25 @@ import com.browseengine.bobo.util.BigSegmentedArray;
 public class SortByFacetIterator extends FacetIterator
 {
 
+	private static Logger logger = Logger.getLogger(SortByFacetIterator.class);
+
   public Comparable sortBy;
 
-  private TermValueList _valList;
-  private Int2IntMap indexesToDocids;
-  private TermValueList _sortByValList;
-  private BigSegmentedArray _sortByOrderArray;
-  private int[] _count;
-  private int _countlength;
+	private final TermValueList _valList;
+	private final Int2IntMap indexesToDocids;
+	private final TermValueList _sortByValList;
+	private final BigSegmentedArray _sortByOrderArray;
+	private final int[] _count;
+	private final int _countlength;
+	private final int _lastIndex;
+
   private int _index;
-  private int _lastIndex;
+
 
   public SortByFacetIterator(FacetDataCache dataCache, FacetDataCache sortByDataCache, int[] counts, int countsLength,
-      boolean zeroBased)
+			boolean zeroBased)
   {
-    _valList = dataCache.valArray;
+		_valList = dataCache.valArray;
     indexesToDocids = dataCache.indexesToDocids;
     _sortByValList = sortByDataCache.valArray;
     _sortByOrderArray = sortByDataCache.orderArray;
@@ -58,11 +64,19 @@ public class SortByFacetIterator extends FacetIterator
   public Comparable next()
   {
     _index++;
-    facet = (Comparable) _valList.getRawValue(_index);
-    count = _count[_index];
-    sortBy = _sortByValList.get(_sortByOrderArray.get(indexesToDocids.get(_index)));
+		syncStateToIndex();
     return format(facet);
   }
+
+	private void syncStateToIndex() {
+		facet = (Comparable) _valList.getRawValue(_index);
+		count = _count[_index];
+		if (count > 0) {
+			sortBy = _sortByValList.get(_sortByOrderArray.get(indexesToDocids.get(_index)));
+		} else {
+			sortBy = null;
+		}
+	}
 
   @Override
   public Comparable next(int minHits)
@@ -71,9 +85,7 @@ public class SortByFacetIterator extends FacetIterator
     {
       if (_count[_index] >= minHits)
       {
-        facet = (Comparable) _valList.getRawValue(_index);
-        count = _count[_index];
-        sortBy = _sortByValList.get(_sortByOrderArray.get(indexesToDocids.get(_index)));
+				syncStateToIndex();
         return format(facet);
       }
     }
