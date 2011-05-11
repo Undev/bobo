@@ -163,6 +163,9 @@ public class CombinedSortByFacetIterator extends FacetIterator
       } else
       {
         count += node.count;
+				if (node.sortBy != null) {
+					sortBy = node.sortBy;
+				}
       }
     }
     return format(facet);

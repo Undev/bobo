@@ -32,8 +32,15 @@ public class SortByFacetIterator extends FacetIterator
   {
 		_valList = dataCache.valArray;
     indexesToDocids = dataCache.indexesToDocids;
+    if (sortByDataCache != null)
+    {
     _sortByValList = sortByDataCache.valArray;
     _sortByOrderArray = sortByDataCache.orderArray;
+    } else
+    {
+      _sortByValList = null;
+      _sortByOrderArray = null;
+    }
     _count = counts;
     _countlength = countsLength;
     _index = -1;
@@ -71,7 +78,8 @@ public class SortByFacetIterator extends FacetIterator
 	private void syncStateToIndex() {
 		facet = (Comparable) _valList.getRawValue(_index);
 		count = _count[_index];
-		if (count > 0) {
+    if (count > 0 && _sortByValList != null && _sortByOrderArray != null)
+    {
 			sortBy = _sortByValList.get(_sortByOrderArray.get(indexesToDocids.get(_index)));
 		} else {
 			sortBy = null;
