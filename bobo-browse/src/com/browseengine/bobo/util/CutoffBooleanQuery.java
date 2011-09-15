@@ -1,9 +1,9 @@
 package com.browseengine.bobo.util;
 
 import java.io.IOException;
+import java.util.Set;
 
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.Query;
@@ -13,11 +13,12 @@ import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.Similarity;
 import org.apache.lucene.search.Weight;
 
-public class CutoffBooleanQuery extends BooleanQuery {
+public class CutoffBooleanQuery extends Query {
 
 	private static final long serialVersionUID = -8251827396290700138L;
 	private final float maxScore;
 	private final float threshold;
+	private final Query query;
 
 	private class CutoffScorerWrapper extends Scorer {
 
@@ -119,16 +120,94 @@ public class CutoffBooleanQuery extends BooleanQuery {
 
 	}
 
-	public CutoffBooleanQuery(float maxScore, float threshold) {
+	public CutoffBooleanQuery(Query query, float maxScore, float threshold) {
+		this.query = query;
 		this.maxScore = maxScore;
 		this.threshold = threshold;
 	}
 
 	@Override
+	public void setBoost(float b) {
+		query.setBoost(b);
+	}
+
+	@Override
+	public float getBoost() {
+		return query.getBoost();
+	}
+
+	@Override
+	public String toString(String field) {
+		return query.toString(field);
+	}
+
+	@Override
+	public String toString() {
+		return query.toString();
+	}
+
+	@Override
+	public Weight createWeight(Searcher searcher) throws IOException {
+		return wrap(query.createWeight(searcher));
+	}
+
+	@Override
 	public Weight weight(Searcher searcher) throws IOException {
-		Weight weight = super.weight(searcher);
+		return wrap(query.weight(searcher));
+	}
+
+	private CutoffWeightWrapper wrap(Weight weight) {
 		return new CutoffWeightWrapper(weight);
 	}
 
+	@Override
+	public Query rewrite(IndexReader reader) throws IOException {
+		Query rewritten = query.rewrite(reader);
+		if (rewritten == query) {
+			return this;
+		}
+		return new CutoffBooleanQuery(rewritten, maxScore, threshold);
+	}
 
+	@Override
+	public Query combine(Query[] queries) {
+		Query[] extracted = new Query[queries.length];
+		for (int i = 0; i < queries.length; i++) {
+			Query query = queries[i];
+			if (query instanceof CutoffBooleanQuery) {
+				CutoffBooleanQuery wrapped = (CutoffBooleanQuery) query;
+				extracted[i] = wrapped.query;
+			} else {
+				extracted[i] = query;
+			}
+
+		}
+		return new CutoffBooleanQuery(query.combine(extracted), maxScore, threshold);
+	}
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public void extractTerms(Set terms) {
+		query.extractTerms(terms);
+	}
+
+	@Override
+	public Similarity getSimilarity(Searcher searcher) {
+		return query.getSimilarity(searcher);
+	}
+
+	@Override
+	public Object clone() {
+		return new CutoffBooleanQuery((Query) query.clone(), maxScore, threshold);
+	}
+
+	@Override
+	public int hashCode() {
+		return query.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		return query.equals(obj);
+	}
 }
