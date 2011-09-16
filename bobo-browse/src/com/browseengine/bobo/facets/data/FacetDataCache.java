@@ -1,9 +1,9 @@
 package com.browseengine.bobo.facets.data;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -127,46 +127,45 @@ public class FacetDataCache<T> implements Serializable {
         if (term == null || term.field() != field)
           break;
 
-        if (t > order.maxValue())
-        {
-          throw new IOException("maximum number of value cannot exceed: "
-              + order.maxValue());
-        }
-        // store term text
-        // we expect that there is at most one term per document
-        if (t >= length)
-          throw new RuntimeException("there are more terms than "
-              + "documents in field \"" + field
-              + "\", but it's impossible to sort on " + "tokenized fields");
-        list.add(term.text());
-        termDocs.seek(termEnum);
-        // freqList.add(termEnum.docFreq()); // doesn't take into account
-        // deldocs
-        int minID = -1;
-        int maxID = -1;
-        int df = 0;
-        if (termDocs.next())
-        {
-          df++;
-          int docid = termDocs.doc();
-          order.add(docid, t);
-          if(this.fillIndexesToDocids) {
-              indexesToDocids.put(t, docid);
-          }
-          minID = docid;
-          while (termDocs.next())
-          {
-            df++;
-            docid = termDocs.doc();
-            order.add(docid, t);
-          }
-          maxID = docid;
-        }
-        freqList.add(df);
-        minIDList.add(minID);
-        maxIDList.add(maxID);
+				if (!list.skipTerm(term)) {
 
-        t++;
+					if (t > order.maxValue()) {
+						throw new IOException("maximum number of value cannot exceed: " + order.maxValue());
+					}
+					// store term text
+					// we expect that there is at most one term per document
+					if (t >= length)
+						throw new RuntimeException("there are more terms than " + "documents in field \"" + field
+								+ "\", but it's impossible to sort on " + "tokenized fields");
+
+					list.add(term.text());
+					termDocs.seek(termEnum);
+					// freqList.add(termEnum.docFreq()); // doesn't take into account
+					// deldocs
+					int minID = -1;
+					int maxID = -1;
+					int df = 0;
+					if (termDocs.next()) {
+						df++;
+						int docid = termDocs.doc();
+						order.add(docid, t);
+						if (this.fillIndexesToDocids) {
+							indexesToDocids.put(t, docid);
+						}
+						minID = docid;
+						while (termDocs.next()) {
+							df++;
+							docid = termDocs.doc();
+							order.add(docid, t);
+						}
+						maxID = docid;
+					}
+					freqList.add(df);
+					minIDList.add(minID);
+					maxIDList.add(maxID);
+
+					t++;
+        }
       } while (termEnum.next());
     } finally
     {

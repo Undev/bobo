@@ -17,4 +17,16 @@ public interface TermListFactory<T>
 		  return String.class;
 		}
 	};
+
+	public static TermListFactory<Integer> NUMERIC_INTEGER_LIST_FACTORY = new TermListFactory<Integer>() {
+
+		public TermValueList<Integer> createTermList() {
+			return new NumericTermIntList();
+		}
+
+		public Class<?> getType() {
+			return Integer.class;
+		}
+
+	};
 }

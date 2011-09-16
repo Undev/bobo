@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import org.apache.lucene.index.Term;
+
 /**
  *  This class behaves as List<String> with a few extensions:
  *  <ul>
@@ -206,5 +208,13 @@ public abstract class TermValueList<T> implements List<String>{
 		}
 		long end = System.currentTimeMillis();
 		System.out.println("took: "+(end-start));
+	}
+
+	/**
+	 * Override this if FacetDataCache should ignore this term (for example not
+	 * full precision terms of NumericFields)
+	 */
+	public boolean skipTerm(Term term) {
+		return false;
 	}
 }

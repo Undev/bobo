@@ -11,11 +11,11 @@ import org.apache.log4j.Logger;
 public class TermIntList extends TermNumberList<Integer>
 {
   private static Logger log = Logger.getLogger(TermIntList.class);
-  private int[] _elements = null;
+	protected int[] _elements = null;
   private int sanity = -1;
   private boolean withDummy = true;
 
-  private static int parse(String s)
+	protected int parse(String s)
   {
     if (s == null || s.length() == 0)
     {
