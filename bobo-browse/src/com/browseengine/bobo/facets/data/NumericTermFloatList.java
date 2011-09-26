@@ -3,33 +3,29 @@ package com.browseengine.bobo.facets.data;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.util.NumericUtils;
 
-public class NumericTermIntList extends TermIntList
-{
+public class NumericTermFloatList extends TermFloatList {
 
 	// need to force formatString to be null
-	public NumericTermIntList() {
+	public NumericTermFloatList() {
 		super(null);
 	}
 
 	@Override
-	protected int parse(String s)
-  {
-    if (s == null || s.length() == 0)
-    {
-      return 0;
-    } else
-    {
+	protected float parse(String s) {
+		if (s == null || s.length() == 0) {
+			return 0.0f;
+		} else {
 			try {
-				return NumericUtils.prefixCodedToInt(s);
+				return NumericUtils.prefixCodedToFloat(s);
 			} catch (NumberFormatException e) {
 				return super.parse(s);
 			}
-    }
-  }
+		}
+	}
 
 	@Override
 	public String get(int index) {
-		return NumericUtils.intToPrefixCoded(_elements[index]);
+		return NumericUtils.floatToPrefixCoded(_elements[index]);
 	}
 
 	@Override
@@ -38,8 +34,8 @@ public class NumericTermIntList extends TermIntList
 		return !isFullPrecision(encoded);
 	}
 
-	private static boolean isFullPrecision(String prefixCoded) {
-		int shift = prefixCoded.charAt(0) - NumericUtils.SHIFT_START_INT;
+	private static boolean isFullPrecision(String encoded) {
+		int shift = encoded.charAt(0) - NumericUtils.SHIFT_START_INT;
 		return shift == 0;
 	}
 

@@ -9,9 +9,9 @@ import java.util.List;
 public class TermDoubleList extends TermNumberList<Double>
 {
 
-  private double[] _elements = null;
+	protected double[] _elements = null;
 
-  private static double parse(String s)
+  protected double parse(String s)
   {
     if (s == null || s.length() == 0)
     {

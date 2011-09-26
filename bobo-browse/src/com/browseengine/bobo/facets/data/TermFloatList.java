@@ -9,9 +9,9 @@ import java.util.List;
 public class TermFloatList extends TermNumberList<Float>
 {
 
-  private float[] _elements = null;
+	protected float[] _elements = null;
 
-  private static float parse(String s)
+  protected float parse(String s)
   {
     if (s == null || s.length() == 0)
     {
