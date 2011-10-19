@@ -27,6 +27,11 @@ public class TermDoubleList extends TermNumberList<Double>
     super();
   }
 
+  public TermDoubleList(int capacity)
+  {
+    super(capacity);
+  }
+
   public TermDoubleList(String formatString)
   {
     super(formatString);

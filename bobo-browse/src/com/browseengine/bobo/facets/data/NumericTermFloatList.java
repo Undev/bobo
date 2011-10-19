@@ -10,6 +10,11 @@ public class NumericTermFloatList extends TermFloatList {
 		super(null);
 	}
 
+	// need to force formatString to be null
+	public NumericTermFloatList(int capacity) {
+		super(capacity, null);
+	}
+
 	@Override
 	protected float parse(String s) {
 		if (s == null || s.length() == 0) {

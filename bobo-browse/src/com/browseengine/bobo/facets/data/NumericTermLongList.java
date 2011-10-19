@@ -10,6 +10,11 @@ public class NumericTermLongList extends TermLongList {
 		super(null);
 	}
 
+	// need to force formatString to be null
+	public NumericTermLongList(int capacity) {
+		super(capacity, null);
+	}
+
 	@Override
 	protected long parse(String s) {
 		if (s == null || s.length() == 0) {

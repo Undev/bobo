@@ -27,6 +27,11 @@ public class TermFloatList extends TermNumberList<Float>
     super();
   }
 
+  public TermFloatList(int capacity)
+  {
+    super(capacity);
+  }
+
   public TermFloatList(String formatString)
   {
     super(formatString);

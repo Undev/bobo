@@ -1,6 +1,8 @@
 package com.browseengine.bobo.facets.impl;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -17,12 +19,13 @@ import com.browseengine.bobo.facets.FacetHandler;
 import com.browseengine.bobo.facets.data.FacetDataCache;
 import com.browseengine.bobo.facets.data.TermListFactory;
 import com.browseengine.bobo.facets.filter.AdaptiveFacetFilter;
-import com.browseengine.bobo.facets.filter.AdaptiveFacetFilter.FacetDataCacheBuilder;
 import com.browseengine.bobo.facets.filter.EmptyFilter;
 import com.browseengine.bobo.facets.filter.FacetFilter;
 import com.browseengine.bobo.facets.filter.FacetOrFilter;
 import com.browseengine.bobo.facets.filter.RandomAccessFilter;
 import com.browseengine.bobo.facets.filter.RandomAccessNotFilter;
+import com.browseengine.bobo.facets.filter.RandomAccessOrFilter;
+import com.browseengine.bobo.facets.filter.AdaptiveFacetFilter.FacetDataCacheBuilder;
 import com.browseengine.bobo.query.scoring.BoboDocScorer;
 import com.browseengine.bobo.query.scoring.FacetScoreable;
 import com.browseengine.bobo.query.scoring.FacetTermScoringFunctionFactory;
@@ -32,7 +35,7 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 {
 	private static Logger logger = Logger.getLogger(SimpleFacetHandler.class);
 	
-    protected final TermListFactory _termListFactory;
+    protected TermListFactory _termListFactory;
     protected final String _indexFieldName;
 
 	public SimpleFacetHandler(String name,String indexFieldName,TermListFactory termListFactory,Set<String> dependsOn)
@@ -97,7 +100,7 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 
 		@Override
 		public String getName() {
-			return _name;
+			return _indexFieldName;
 		}
     	
     }, f, new String[]{value}, false);
@@ -134,7 +137,7 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 
   		@Override
   		public String getName() {
-  			return _name;
+  			return _indexFieldName;
   		}
       	
       }, f, vals, isNot);
@@ -158,8 +161,22 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 
   @Override
 	public FacetCountCollectorSource getFacetCountCollectorSource(final BrowseSelection sel,final FacetSpec ospec) {
-	  return new FacetCountCollectorSource(){
+    return getFacetCountCollectorSource(sel, ospec, false);
+	}
 
+	public FacetCountCollectorSource getFacetCountCollectorSource(final BrowseSelection sel,final FacetSpec ospec, final boolean groupMode) {
+    if (groupMode) {
+	  return new FacetCountCollectorSource(){
+        @Override
+        public FacetCountCollector getFacetCountCollector(
+            BoboIndexReader reader, int docBase) {
+          FacetDataCache dataCache = SimpleFacetHandler.this.getFacetData(reader);
+          return new SimpleGroupByFacetCountCollector(_name,dataCache,docBase,sel,ospec);
+        }  
+      };
+    }
+    else {
+      return new FacetCountCollectorSource(){
 		@Override
 		public FacetCountCollector getFacetCountCollector(
 				BoboIndexReader reader, int docBase) {
@@ -167,6 +184,7 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 			return new SimpleFacetCountCollector(_name,dataCache,docBase,sel,ospec);
 		}
 	  };
+    }
 	}
 
 	@Override
@@ -198,8 +216,42 @@ public class SimpleFacetHandler extends FacetHandler<FacetDataCache> implements 
 		}
 	}
 
+	public static final class SimpleGroupByFacetCountCollector extends GroupByFacetCountCollector
+	{
+    protected int _totalGroups;
+
+		public SimpleGroupByFacetCountCollector(String name,FacetDataCache dataCache,int docBase,BrowseSelection sel,FacetSpec ospec)
+		{
+		    super(name,dataCache,docBase,sel,ospec);
+        _totalGroups = 0;
+		}
+		
+		public final void collect(int docid) {
+			if(++_count[_array.get(docid)] <= 1)
+        ++_totalGroups;
+		}
+		
+		public final void collectAll() {
+		  _count = _dataCache.freqs;
+      _totalGroups = -1;
+		}
+
+    public final int getTotalGroups() {
+      if (_totalGroups >= 0)
+        return _totalGroups;
+
+      // If the user calls collectAll instead of collect, we have to collect all the groups here:
+      _totalGroups = 0;
+      for (int c: _count) {
+        if (c > 0)
+          ++_totalGroups;
+      }
+      return _totalGroups;
+    }
+	}
+	
 	public static final class SimpleBoboDocScorer extends BoboDocScorer{
-		private final FacetDataCache _dataCache;
+		protected final FacetDataCache _dataCache;
 
 		public SimpleBoboDocScorer(FacetDataCache dataCache,FacetTermScoringFunctionFactory scoreFunctionFactory,float[] boostList){
 			super(scoreFunctionFactory.getFacetTermScoringFunction(dataCache.valArray.size(), dataCache.orderArray.size()),boostList);

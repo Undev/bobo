@@ -39,9 +39,9 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
@@ -57,10 +57,13 @@ import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.index.Payload;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.DefaultSimilarity;
 import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
@@ -81,13 +84,13 @@ import com.browseengine.bobo.api.BrowseHit;
 import com.browseengine.bobo.api.BrowseRequest;
 import com.browseengine.bobo.api.BrowseResult;
 import com.browseengine.bobo.api.BrowseSelection;
+import com.browseengine.bobo.api.BrowseSelection.ValueOperation;
 import com.browseengine.bobo.api.ComparatorFactory;
 import com.browseengine.bobo.api.FacetAccessible;
 import com.browseengine.bobo.api.FacetSpec;
+import com.browseengine.bobo.api.FacetSpec.FacetSortSpec;
 import com.browseengine.bobo.api.FieldValueAccessor;
 import com.browseengine.bobo.api.MultiBoboBrowser;
-import com.browseengine.bobo.api.BrowseSelection.ValueOperation;
-import com.browseengine.bobo.api.FacetSpec.FacetSortSpec;
 import com.browseengine.bobo.facets.FacetHandler;
 import com.browseengine.bobo.facets.FacetHandler.TermCountSize;
 import com.browseengine.bobo.facets.data.PredefinedTermListFactory;
@@ -100,6 +103,7 @@ import com.browseengine.bobo.facets.impl.FacetHitcountComparatorFactory;
 import com.browseengine.bobo.facets.impl.FacetValueComparatorFactory;
 import com.browseengine.bobo.facets.impl.FilteredRangeFacetHandler;
 import com.browseengine.bobo.facets.impl.GeoFacetHandler;
+import com.browseengine.bobo.facets.impl.GeoSimpleFacetHandler;
 import com.browseengine.bobo.facets.impl.HistogramFacetHandler;
 import com.browseengine.bobo.facets.impl.MultiValueFacetHandler;
 import com.browseengine.bobo.facets.impl.PathFacetHandler;
@@ -172,7 +176,7 @@ public class BoboTestCase extends TestCase {
 		
 	public static Field buildMetaField(String name,String val)
 	{
-	  Field f = new Field(name,val,Field.Store.YES,Index.NOT_ANALYZED_NO_NORMS);
+	  Field f = new Field(name,val,Field.Store.NO,Index.NOT_ANALYZED_NO_NORMS);
 	  f.setOmitTermFreqAndPositions(true);
 	  return f;
 	}
@@ -242,7 +246,8 @@ public class BoboTestCase extends TestCase {
 		d1.add(buildMetaField("longitude", "120"));
 		d1.add(buildMetaField("salary", "04500"));
 		
-		Field sf = new Field("testStored","stored",Store.YES,Index.NO);
+		Field sf = new Field("testStored","stored",Store.YES,Index.NOT_ANALYZED_NO_NORMS);
+		sf.setOmitTermFreqAndPositions(true);
 		d1.add(sf);
 		
 		Document d2=new Document();
@@ -476,6 +481,11 @@ public class BoboTestCase extends TestCase {
 		facetHandlers.add(multipathHandler);
 		
 		facetHandlers.add(new SimpleFacetHandler("number", numTermFactory));
+		facetHandlers.add(new SimpleFacetHandler("testStored"));
+		
+		
+
+		facetHandlers.add(new SimpleFacetHandler("name"));
 		facetHandlers.add(new RangeFacetHandler("date", new PredefinedTermListFactory(Date.class, "yyyy/MM/dd"), Arrays.asList(new String[]{"[2000/01/01 TO 2003/05/05]", "[2003/05/06 TO 2005/04/04]"})));
 		facetHandlers.add(new SimpleFacetHandler("char", (TermListFactory)null));
 		facetHandlers.add(new MultiValueFacetHandler("tag", (String)null, (TermListFactory)null, tagSizePayloadTerm));
@@ -485,7 +495,7 @@ public class BoboTestCase extends TestCase {
 		/* New FacetHandler for geographic locations. Depends on two RangeFacetHandlers on latitude and longitude */
 		facetHandlers.add(new RangeFacetHandler("latitude", Arrays.asList(new String[]{"[* TO 30]", "[35 TO 60]", "[70 TO 120]"})));
 		facetHandlers.add(new RangeFacetHandler("longitude", Arrays.asList(new String[]{"[* TO 30]", "[35 TO 60]", "[70 TO 120]"})));
-		facetHandlers.add(new GeoExample("distance", "latitude", "longitude"));
+		facetHandlers.add(new GeoSimpleFacetHandler("distance", "latitude", "longitude"));
 		facetHandlers.add(new GeoFacetHandler("correctDistance", "latitude", "longitude"));
 		/* Underlying time facet for DynamicTimeRangeFacetHandler */
 		facetHandlers.add(new RangeFacetHandler("timeinmillis", new PredefinedTermListFactory(Long.class, DynamicTimeRangeFacetHandler.NUMBER_FORMAT),null));
@@ -498,12 +508,33 @@ public class BoboTestCase extends TestCase {
 		RangeFacetHandler dependedRangeFacet = new RangeFacetHandler("salary", Arrays.asList(predefinedSalaryRanges));
         facetHandlers.add(dependedRangeFacet);
     
-		String[] predefinedBuckets = new String[4];
-        predefinedBuckets[0] =  new String("[04000 TO 05999],[06000 TO 07999],[08000 TO 09999],[10000 TO *]");
-        predefinedBuckets[1] =  new String("[06000 TO 07999],[08000 TO 09999],[10000 TO *]");
-        predefinedBuckets[2] =  new String("[08000 TO 09999],[10000 TO *]");
-        predefinedBuckets[3] =  new String("[10000 TO *]");
-		facetHandlers.add(new BucketFacetHandler("salaryBucket", Arrays.asList(predefinedBuckets), "salary"));
+		String[][] predefinedBuckets = new String[4][];
+        predefinedBuckets[0] =  new String[]{"ken","igor","abe"};
+        predefinedBuckets[1] =  new String[]{"ken","john","mike"};
+        predefinedBuckets[2] =  new String[]{"john","cathy"};
+        predefinedBuckets[3] =  new String[]{"doug"};
+        
+        Map<String,String[]> predefinedGroups = new HashMap<String,String[]>();
+        predefinedGroups.put("g1", predefinedBuckets[0]);
+        predefinedGroups.put("g2", predefinedBuckets[1]);
+        predefinedGroups.put("g3", predefinedBuckets[2]);
+        predefinedGroups.put("g4", predefinedBuckets[3]);
+        
+		facetHandlers.add(new BucketFacetHandler("groups", predefinedGroups, "name"));
+		
+		
+		String[][] predefinedBuckets2 = new String[3][];
+		predefinedBuckets2[0] =  new String[]{"2","3"};
+		predefinedBuckets2[1] =  new String[]{"1","4"};
+		predefinedBuckets2[2] =  new String[]{"7","8"};
+        
+        Map<String,String[]> predefinedNumberSets = new HashMap<String,String[]>();
+        predefinedNumberSets.put("s1", predefinedBuckets2[0]);
+        predefinedNumberSets.put("s2", predefinedBuckets2[1]);
+        predefinedNumberSets.put("s3", predefinedBuckets2[2]);
+        
+		facetHandlers.add(new BucketFacetHandler("sets", predefinedNumberSets, "multinum"));
+		
 		
 		// histogram
 		
@@ -706,6 +737,52 @@ public class BoboTestCase extends TestCase {
 		}
 		buffer.append("}").append('\n');
 		return buffer.toString();
+	}
+
+	public void testStoredFacetField() throws Exception{
+		BrowseRequest br=new BrowseRequest();
+		br.setCount(10);
+		br.setOffset(0);
+
+        BrowseSelection colorSel=new BrowseSelection("testStored");
+        colorSel.addValue("stored");
+        br.addSelection(colorSel); 
+        br.setFetchStoredFields(true);
+        
+        BrowseResult result = null;
+        BoboBrowser boboBrowser=null;
+	  	try {
+	  		boboBrowser=newBrowser();
+	  	  
+	        result = boboBrowser.browse(br);
+	        assertEquals(1,result.getNumHits());
+	        BrowseHit hit = result.getHits()[0];
+	        Document storedFields = hit.getStoredFields();
+	        assertNotNull(storedFields);
+	        
+	        String[] values = storedFields.getValues("testStored");
+	        assertNotNull(values);
+	        assertEquals(1, values.length);
+	        assertTrue("stored".equals(values[0]));
+	        
+	  	} catch (BrowseException e) {
+	  		e.printStackTrace();
+	  		fail(e.getMessage());
+	  	}
+	  	catch(IOException ioe){
+	  	  fail(ioe.getMessage());
+	  	}
+	  	finally{
+	  	  if (boboBrowser!=null){
+	  	    try {
+	  	      if(result!=null) result.close();
+	  			boboBrowser.close();
+	  		} catch (IOException e) {
+	  			fail(e.getMessage());
+	  		}
+	  	  }
+	  	}
+        
 	}
 	
 	public void testStoredField() throws Exception{
@@ -940,8 +1017,8 @@ public class BoboTestCase extends TestCase {
 		br.setOffset(0);
 
         BrowseSelection sel=new BrowseSelection("distance");
-        sel.addValue("<30,70,5>");
-        sel.addValue("<60,120,1>");
+        sel.addValue("30,70:5");
+        sel.addValue("60,120:1");
         br.addSelection(sel); 
 		
 		FacetSpec geoSpec=new FacetSpec();
@@ -949,7 +1026,7 @@ public class BoboTestCase extends TestCase {
 		br.setFacetSpec("distance", geoSpec);
 		
 		HashMap<String,List<BrowseFacet>> answer=new HashMap<String,List<BrowseFacet>>();
-		answer.put("distance", Arrays.asList(new BrowseFacet[]{new BrowseFacet("<30,70,5>",2),new BrowseFacet("<60,120,1>",2)}));
+		answer.put("distance", Arrays.asList(new BrowseFacet[]{new BrowseFacet("30,70:5",2),new BrowseFacet("60,120:1",2)}));
 		doTest(br,4,answer,null);
 
 		// testing for selection of facet <60,120,1> and verifying that 2 documents match this facet.
@@ -958,9 +1035,9 @@ public class BoboTestCase extends TestCase {
 		br2.setOffset(0);	
 
 		BrowseSelection sel2 = new BrowseSelection("distance");
-		sel2.addValue("<60,120,1>");
+		sel2.addValue("60,120:1");
 		HashMap<String, Float> map = new HashMap<String, Float>();
-		map.put("<60,120,1>", 3.0f);
+		map.put("0,120:1", 3.0f);
 		FacetTermQuery geoQ = new FacetTermQuery(sel2,map);
 		
 		BoboBrowser b = newBrowser();
@@ -989,7 +1066,7 @@ public class BoboTestCase extends TestCase {
 		br3.setQuery(colorQ);             // query is color=red
 		br3.addSelection(sel);			  // count facets <30,70,5> and <60,120,1>
 		answer.clear();
-		answer.put("distance", Arrays.asList(new BrowseFacet[]{new BrowseFacet("<30,70,5>", 0), new BrowseFacet("<60,120,1>",1)}));		
+		answer.put("distance", Arrays.asList(new BrowseFacet[]{new BrowseFacet("30,70:5", 0), new BrowseFacet("60,120:1",1)}));		
 		doTest(br3, 1 , answer, null);
 
 	}
@@ -1559,7 +1636,7 @@ public class BoboTestCase extends TestCase {
 	public void testQueryWithScore() throws Exception{
 		BrowseRequest br=new BrowseRequest();
 		br.setShowExplanation(false);	// default
-		  QueryParser parser=new QueryParser(Version.LUCENE_CURRENT,"color",new StandardAnalyzer(Version.LUCENE_CURRENT));
+		  QueryParser parser=new QueryParser(Version.LUCENE_29,"color",new StandardAnalyzer(Version.LUCENE_29));
 		  br.setQuery(parser.parse("color:red OR shape:square"));
 	      br.setCount(10);
 	      br.setOffset(0);
@@ -1602,7 +1679,7 @@ public class BoboTestCase extends TestCase {
   public void testBrowseWithQuery(){
 		try{
 		  BrowseRequest br=new BrowseRequest();
-		  QueryParser parser=new QueryParser(Version.LUCENE_CURRENT,"shape",new StandardAnalyzer(Version.LUCENE_CURRENT));
+		  QueryParser parser=new QueryParser(Version.LUCENE_29,"shape",new StandardAnalyzer(Version.LUCENE_29));
 		  br.setQuery(parser.parse("square OR circle"));
 	      br.setCount(10);
 	      br.setOffset(0);
@@ -2027,6 +2104,44 @@ public class BoboTestCase extends TestCase {
       multiBoboBrowser.close();
 	}
 	
+
+	public void testFacetQueryBoost() throws Exception{
+		BrowseSelection sel = new BrowseSelection("color");
+		sel.addValue("red");
+		sel.addValue("blue");
+		HashMap<String, Float> map = new HashMap<String, Float>();
+		map.put("red", 5.0f);
+		map.put("blue", 4.0f);
+		FacetTermQuery colorQ = new FacetTermQuery(sel,map);
+		
+		BrowseSelection sel2 = new BrowseSelection("shape");
+		sel2.addValue("circle");
+		sel2.addValue("square");
+		HashMap<String, Float> map2 = new HashMap<String, Float>();
+		map2.put("circle", 3.0f);
+		map2.put("square", 2.0f);
+		FacetTermQuery shapeQ = new FacetTermQuery(sel2,map2);
+		shapeQ.setBoost(3.0f);
+		
+		BooleanQuery bq = new BooleanQuery();
+		bq.add(shapeQ,Occur.SHOULD);
+		bq.add(colorQ,Occur.SHOULD);
+		
+		BrowseRequest br = new BrowseRequest();
+		br.setSort(new SortField[]{SortField.FIELD_SCORE});
+		br.setQuery(bq);
+		br.setOffset(0);
+		br.setCount(10);
+		
+		
+		BrowseResult res = doTest(br,6,null,new String[]{"4","1","7","5","3","2"});
+		BrowseHit[] hits = res.getHits();
+		float[] scores = new float[]{13,11,11,10,4.5f,2.5f};  // default coord = 1/2
+		for (int i=0;i<hits.length;++i){
+			assertEquals(scores[i],hits[i].getScore());
+		}
+	}
+	
 	public void testFacetQuery() throws Exception{
 		BrowseSelection sel = new BrowseSelection("color");
 		sel.addValue("red");
@@ -2052,13 +2167,64 @@ public class BoboTestCase extends TestCase {
 		
 		doTest(br,5,null,new String[]{"1","2","7","4","5"});
 		
-		BoboBrowser b = newBrowser();
-		Explanation expl = b.explain(colorQ, 0);
+		//BoboBrowser b = newBrowser();
+	//	Explanation expl = b.explain(colorQ, 0);
 		
 		br.setQuery(tagQ);
 		doTest(br,4,null,new String[]{"7","1","3","2"});
-		expl = b.explain(tagQ, 6);
+	//	expl = b.explain(tagQ, 6);
 		
+	}
+	
+	 public void testFacetQueryBoolean() throws Exception{
+	    BrowseSelection sel = new BrowseSelection("color");
+	    sel.addValue("red");
+	    sel.addValue("blue");
+	    HashMap<String, Float> map = new HashMap<String, Float>();
+	    map.put("red", 3.0f);
+	    map.put("blue", 2.0f);
+	    FacetTermQuery colorQ = new FacetTermQuery(sel,map);
+	    
+	    BrowseSelection sel2 = new BrowseSelection("tag");
+	    sel2.addValue("rabbit");
+	    sel2.addValue("dog");
+	    HashMap<String, Float> map2 = new HashMap<String, Float>();
+	    map2.put("rabbit", 100.0f);
+	    map2.put("dog", 50.0f);
+	    FacetTermQuery tagQ = new FacetTermQuery(sel2,map2);
+	    
+	    
+	    BrowseRequest br = new BrowseRequest();
+
+	    br.setOffset(0);
+	    br.setCount(10);
+	    
+	    
+	    BooleanQuery bq = new BooleanQuery(true);
+	    bq.add(colorQ, Occur.SHOULD);
+	    bq.add(tagQ, Occur.SHOULD);
+	    
+	    br.setQuery(bq);
+	    doTest(br, 6, null, new String[]{"7","1","3","2","4","5"});
+	    
+	    
+	  }
+	
+	public void testFacetRangeQuery() throws Exception{
+		BrowseSelection sel = new BrowseSelection("numendorsers");
+		sel.addValue("[* TO 000010]");
+		
+		HashMap<String, Float> map = new HashMap<String, Float>();
+		map.put("000002", 100.0f);
+		map.put("000010", 50.0f);
+		FacetTermQuery numberQ = new FacetTermQuery(sel,map);
+		
+		BrowseRequest br = new BrowseRequest();
+		br.setQuery(numberQ);
+		br.setOffset(0);
+		br.setCount(10);
+		
+		doTest(br,4,null,new String[]{"5","2","1","6"});
 	}
 	
 	public void testFacetBoost() throws Exception{
@@ -2230,7 +2396,6 @@ public class BoboTestCase extends TestCase {
 			writer.commit();
 			reader = (BoboIndexReader)boboReader.reopen();
 			assertNotSame(boboReader, reader);
-	//		boboReader.close();
 			assertEquals(numDocs+1,reader.numDocs());
 			boboReader = reader;
 		}
@@ -2404,44 +2569,134 @@ public class BoboTestCase extends TestCase {
         doTest(br,2,answer,null);
 	}
 	
-	 public void testBucketFacetHandlerDependingOnRangeHandler() throws Exception{
+
+	 public void testBucketFacetHandlerForNumbers() throws Exception{
+		 /*
+		  * 
+		  * 
+		String[][] predefinedBuckets2 = new String[3][];
+		predefinedBuckets2[0] =  new String[]{"2","3"};
+		predefinedBuckets2[1] =  new String[]{"1","4"};
+		predefinedBuckets2[2] =  new String[]{"7","8"};
+        
+        Map<String,String[]> predefinedNumberSets = new HashMap<String,String[]>();
+        predefinedNumberSets.put("s1", predefinedBuckets2[0]);
+        predefinedNumberSets.put("s2", predefinedBuckets2[1]);
+        predefinedNumberSets.put("s3", predefinedBuckets2[2]);
+		  */
+		 BrowseRequest br=new BrowseRequest();
+		    br.setCount(10);
+		    br.setOffset(0);
+		    
+		    FacetSpec output=new FacetSpec();
+		    output.setOrderBy(FacetSortSpec.OrderHitsDesc);
+		    br.setFacetSpec("sets", output);
+	      
+		    BrowseFacet[] answerBucketFacets = new BrowseFacet[3];     
+		    answerBucketFacets[0] =  new BrowseFacet("s1", 5);
+		    answerBucketFacets[1] =  new BrowseFacet("s2", 4);
+		    answerBucketFacets[2] =  new BrowseFacet("s3", 3);
+	      
+	        HashMap<String,List<BrowseFacet>> answer = new HashMap<String,List<BrowseFacet>>();
+	        answer.put("sets", Arrays.asList(answerBucketFacets)); 
+		    doTest(br,7,answer,null);
+		    
+		    br=new BrowseRequest();
+		    br.setCount(10);
+		    br.setOffset(0);
+		    
+		    BrowseSelection sel=new BrowseSelection("sets");
+	        sel.addValue("s1");
+	        br.addSelection(sel);
+		    
+		    output=new FacetSpec();
+		    output.setOrderBy(FacetSortSpec.OrderHitsDesc);
+		    br.setFacetSpec("sets", output);
+	      
+		    answerBucketFacets = new BrowseFacet[3];     
+		    answerBucketFacets[0] =  new BrowseFacet("s1", 5);
+		    answerBucketFacets[1] =  new BrowseFacet("s2", 3);
+		    answerBucketFacets[2] =  new BrowseFacet("s3", 1);
+	      
+	        answer = new HashMap<String,List<BrowseFacet>>();
+	        answer.put("sets", Arrays.asList(answerBucketFacets)); 
+		    doTest(br,4,answer,null);
+	 }
+	 
+	 public void testBucketFacetHandlerForStrings() throws Exception{
 	    BrowseRequest br=new BrowseRequest();
 	    br.setCount(10);
 	    br.setOffset(0);
 	    
-	    BrowseSelection sel=new BrowseSelection("salaryBucket");
-      sel.addValue("[06000 TO 07999],[08000 TO 09999],[10000 TO *]");
-      br.addSelection(sel);
+	    BrowseSelection sel=new BrowseSelection("groups");
+        sel.addValue("g2");
+        br.addSelection(sel);
     
 	    FacetSpec output=new FacetSpec();
-	    output.setExpandSelection(true);
-	    br.setFacetSpec("salaryBucket", output);
+	    output.setOrderBy(FacetSortSpec.OrderHitsDesc);
+	    br.setFacetSpec("groups", output);
+      
+	    BrowseFacet[] answerBucketFacets = new BrowseFacet[3];     
+	    answerBucketFacets[0] =  new BrowseFacet("g2", 3);
+	    answerBucketFacets[1] =  new BrowseFacet("g1", 1);
+	    answerBucketFacets[2] =  new BrowseFacet("g3", 1);
+      
+        HashMap<String,List<BrowseFacet>> answer = new HashMap<String,List<BrowseFacet>>();
+        answer.put("groups", Arrays.asList(answerBucketFacets)); 
+	    doTest(br,3,answer,null);
 	    
-      br.setFacetSpec("salary", output);
+	    br=new BrowseRequest();
+	    br.setCount(10);
+	    br.setOffset(0);
+	    
+	    sel=new BrowseSelection("groups");
+        sel.addValue("g2");
+        sel.addValue("g1");
+        sel.setSelectionOperation(ValueOperation.ValueOperationAnd);
+        br.addSelection(sel);
+    
+	    output=new FacetSpec();
+	    output.setOrderBy(FacetSortSpec.OrderHitsDesc);
+	    br.setFacetSpec("groups", output);
       
-	    BrowseFacet[] answerRangeFacets = new BrowseFacet[3];     
-	    answerRangeFacets[0] =  new BrowseFacet("[06000 TO 07999]", 1);
-	    answerRangeFacets[1] =  new BrowseFacet("[08000 TO 09999]", 2);
-	    answerRangeFacets[2] =  new BrowseFacet("[10000 TO *]",3);
+	    answerBucketFacets = new BrowseFacet[2];     
+	    answerBucketFacets[0] =  new BrowseFacet("g1", 1);
+	    answerBucketFacets[1] =  new BrowseFacet("g2", 1);
       
-	    BrowseFacet[] answerBucketFacets = new BrowseFacet[4];     
-	    answerBucketFacets[0] =  new BrowseFacet("[04000 TO 05999],[06000 TO 07999],[08000 TO 09999],[10000 TO *]", 7);
-	    answerBucketFacets[1] =  new BrowseFacet("[06000 TO 07999],[08000 TO 09999],[10000 TO *]", 6);
-	    answerBucketFacets[2] =  new BrowseFacet("[08000 TO 09999],[10000 TO *]", 5);
-	    answerBucketFacets[3] =  new BrowseFacet("[10000 TO *]",3);
+      answer = new HashMap<String,List<BrowseFacet>>();
+      answer.put("groups", Arrays.asList(answerBucketFacets)); 
+	    doTest(br,1,answer,null);
+	    
+	    br=new BrowseRequest();
+	    br.setCount(10);
+	    br.setOffset(0);
+	    
+	    sel=new BrowseSelection("groups");
+        sel.addValue("g2");
+        sel.addValue("g1");
+        sel.setSelectionOperation(ValueOperation.ValueOperationOr);
+        br.addSelection(sel);
+    
+	    output=new FacetSpec();
+	    output.setOrderBy(FacetSortSpec.OrderHitsDesc);
+	    br.setFacetSpec("groups", output);
       
-      HashMap<String,List<BrowseFacet>> answer = new HashMap<String,List<BrowseFacet>>();
-      answer.put("salaryBucket", Arrays.asList(answerBucketFacets)); 
-      answer.put("salary", Arrays.asList(answerRangeFacets));
-	    doTest(br,6,answer,null);
+	    answerBucketFacets = new BrowseFacet[3];     
+	    answerBucketFacets[0] =  new BrowseFacet("g1", 3);
+	    answerBucketFacets[1] =  new BrowseFacet("g2", 3);
+	    answerBucketFacets[2] =  new BrowseFacet("g3", 1);
+      
+      answer = new HashMap<String,List<BrowseFacet>>();
+      answer.put("groups", Arrays.asList(answerBucketFacets)); 
+	    doTest(br,5,answer,null);
     
 	  }
 	 
 	public static void main(String[] args)throws Exception {
 		//BoboTestCase test=new BoboTestCase("testSimpleGroupbyFacetHandler");
-	  BoboTestCase test=new BoboTestCase("testIndexReaderReopen");
+	  BoboTestCase test=new BoboTestCase("testFacetRangeQuery");
 		test.setUp();
-		test.testIndexReaderReopen();
+		test.testFacetRangeQuery();
 		test.tearDown();
 	}
 }

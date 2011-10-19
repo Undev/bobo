@@ -10,6 +10,11 @@ public class NumericTermDoubleList extends TermDoubleList {
 		super(null);
 	}
 
+	// need to force formatString to be null
+	public NumericTermDoubleList(int capacity) {
+		super(capacity, null);
+	}
+
 	@Override
 	protected double parse(String s) {
 		if (s == null || s.length() == 0) {

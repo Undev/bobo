@@ -151,11 +151,6 @@ public class CutoffBooleanQuery extends Query {
 		return wrap(query.createWeight(searcher));
 	}
 
-	@Override
-	public Weight weight(Searcher searcher) throws IOException {
-		return wrap(query.weight(searcher));
-	}
-
 	private CutoffWeightWrapper wrap(Weight weight) {
 		return new CutoffWeightWrapper(weight);
 	}

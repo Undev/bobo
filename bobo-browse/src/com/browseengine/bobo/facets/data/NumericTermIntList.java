@@ -11,6 +11,11 @@ public class NumericTermIntList extends TermIntList
 		super(null);
 	}
 
+	// need to force formatString to be null
+		public NumericTermIntList(int capacity) {
+			super(capacity, null);
+		}
+
 	@Override
 	protected int parse(String s)
   {

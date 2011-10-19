@@ -31,6 +31,11 @@ public class TermLongList extends TermNumberList<Long>
     super();
   }
 
+  public TermLongList(int capacity)
+  {
+    super(capacity);
+  }
+
   public TermLongList(int capacity, String formatString)
   {
     super(capacity, formatString);

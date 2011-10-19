@@ -29,7 +29,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,6 +41,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.document.Document;
@@ -57,6 +60,8 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.ReaderUtil;
+import org.springframework.context.support.FileSystemXmlApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
 
 import com.browseengine.bobo.facets.FacetHandler;
 import com.browseengine.bobo.facets.RuntimeFacetHandlerFactory;
@@ -207,7 +212,7 @@ public class BoboIndexReader extends FilterIndexReader
 	  ArrayList<BoboIndexReader> currentReaders = new ArrayList<BoboIndexReader>(size);
 	  boolean isNewReader = false;
 	  for (int i=0;i<size;++i){
-		  SegmentInfo sinfo = (SegmentInfo)sinfos.get(i);
+		  SegmentInfo sinfo = (SegmentInfo)sinfos.info(i);
 		  BoboIndexReader breader = readerMap.remove(sinfo.name);
 		  if (breader!=null){
 			  // should use SegmentReader.reopen
@@ -250,7 +255,7 @@ public class BoboIndexReader extends FilterIndexReader
 	  boolean sameSeg = false;
 	  //get SegmentInfo instance
 	  for (int i=0;i<size;++i){
-		SegmentInfo sinfoTmp = (SegmentInfo)sinfos.get(i);
+		SegmentInfo sinfoTmp = (SegmentInfo)sinfos.info(i);
 		if (sinfoTmp.name.equals(sreader.getSegmentName())){
 		  int numDels2 = sinfoTmp.getDelCount();
 		  sameSeg = numDels==numDels2;
@@ -451,7 +456,32 @@ public class BoboIndexReader extends FilterIndexReader
 
   private static Collection<FacetHandler<?>> loadFromIndex(File file,WorkArea workArea) throws IOException
   {
-    return null;
+   // File springFile = new File(file, SPRING_CONFIG);
+   // FileSystemXmlApplicationContext appCtx =
+     //   new FileSystemXmlApplicationContext("file:" + springFile.getAbsolutePath());
+    //return (Collection<FacetHandler<?>>) appCtx.getBean("handlers");
+	  
+	  Set<Entry<Class<?>,Object>> entries = workArea.map.entrySet();
+      FileSystemXmlApplicationContext appCtx = new FileSystemXmlApplicationContext();
+      for (Entry<Class<?>,Object> entry : entries){
+		  Object obj = entry.getValue();
+		  if (obj instanceof ClassLoader){
+			  appCtx.setClassLoader((ClassLoader)obj);
+	    	  break;
+		  }
+	  }
+	  
+      String absolutePath = file.getAbsolutePath();
+      String partOne = absolutePath.substring(0, absolutePath.lastIndexOf(File.separator ));
+      String partTwo = URLEncoder.encode(absolutePath.substring(absolutePath.lastIndexOf(File.separator ) + 1), "UTF-8");
+      absolutePath = partOne + File.separator + partTwo;
+      
+      File springFile = new File(new File(absolutePath), SPRING_CONFIG);
+      appCtx.setConfigLocation("file:" + springFile.getAbsolutePath());
+      appCtx.refresh();
+      
+      return (Collection<FacetHandler<?>>) appCtx.getBean("handlers");
+
   }
 
   protected void initialize(Collection<FacetHandler<?>> facetHandlers) throws IOException
@@ -464,7 +494,14 @@ public class BoboIndexReader extends FilterIndexReader
         FSDirectory fsDir = (FSDirectory) idxDir;
         File file = fsDir.getFile();
 
+        if (new File(file, SPRING_CONFIG).exists())
+        {
+          facetHandlers = loadFromIndex(file,_workArea);
+        }
+        else
+        {
         facetHandlers = new ArrayList<FacetHandler<?>>();
+		}
       }
       else
       {
@@ -700,8 +737,16 @@ public class BoboIndexReader extends FilterIndexReader
         String[] vals = facetHandler.getFieldValues(this,docid);
         if (vals != null)
         {
+          String[] values = doc.getValues(facetHandler.getName());
+          Set<String> storedVals = new HashSet<String>(Arrays.asList(values));
+        	
           for (String val : vals)
           {
+        	storedVals.add(val);
+          }
+          doc.removeField(facetHandler.getName());
+          
+          for (String val : storedVals){
             doc.add(new Field(facetHandler.getName(),
                               val,
                               Field.Store.NO,

@@ -253,7 +253,7 @@ public class BoboSubBrowser extends BoboSearcher2 implements Browsable,Closeable
         FacetHandler<?> handler = getFacetHandler(name);
         
         if (handler == null){
-        	logger.warn("facet handler: "+name+" is not defined, ignored.");
+        	logger.error("facet handler: "+name+" is not defined, ignored.");
         	continue;
         }
         
@@ -389,8 +389,8 @@ public class BoboSubBrowser extends BoboSearcher2 implements Browsable,Closeable
     }
   }
   
-  public SortCollector getSortCollector(SortField[] sort,Query q,int offset,int count,boolean fetchStoredFields,boolean forceScoring){
-	  return SortCollector.buildSortCollector(this,q,sort, offset, count, forceScoring,fetchStoredFields);
+  public SortCollector getSortCollector(SortField[] sort,Query q,int offset,int count,boolean fetchStoredFields,boolean forceScoring,String groupBy, int maxPerGroup, boolean collectDocIdCache){
+	  return SortCollector.buildSortCollector(this,q,sort, offset, count, forceScoring,fetchStoredFields, groupBy, maxPerGroup, collectDocIdCache);
   }
 
   /**
@@ -409,7 +409,7 @@ public class BoboSubBrowser extends BoboSearcher2 implements Browsable,Closeable
 
     long start = System.currentTimeMillis();
 
-    SortCollector collector = getSortCollector(req.getSort(),req.getQuery(), req.getOffset(), req.getCount(), req.isFetchStoredFields(),false);
+    SortCollector collector = getSortCollector(req.getSort(),req.getQuery(), req.getOffset(), req.getCount(), req.isFetchStoredFields(),false,req.getGroupBy(), req.getMaxPerGroup(), req.getCollectDocIdCache());
     
     Map<String, FacetAccessible> facetCollectors = new HashMap<String, FacetAccessible>();
     browse(req, collector, facetCollectors);
@@ -441,6 +441,9 @@ public class BoboSubBrowser extends BoboSearcher2 implements Browsable,Closeable
     }
     result.setHits(hits);
     result.setNumHits(collector.getTotalHits());
+    result.setNumGroups(collector.getTotalGroups());
+    result.setGroupAccessible(collector.getGroupAccessible());
+    result.setSortCollector(collector);
     result.setTotalDocs(_reader.numDocs());
     result.addAll(facetCollectors);
     long end = System.currentTimeMillis();
