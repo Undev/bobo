@@ -1,6 +1,7 @@
 package com.browseengine.bobo.facets.data;
 
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import org.apache.lucene.util.NumericUtils;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -18,7 +19,14 @@ public class TermDoubleList extends TermNumberList<Double>
       return 0.0;
     } else
     {
-      return Double.parseDouble(s);
+        // TODO [Greg Bowyer]: This is crappy, we need to work out if the term relates to a field that
+        // is actually a lucene numeric field, there are all sorts of screwball interactions that can occur
+        // here (like the effects of position gaps)
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException nfe) {
+            return NumericUtils.prefixCodedToDouble(s);
+        }
     }
   }
 

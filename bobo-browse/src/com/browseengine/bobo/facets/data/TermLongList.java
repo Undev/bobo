@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.apache.lucene.util.NumericUtils;
 
 public class TermLongList extends TermNumberList<Long>
 {
@@ -22,7 +23,14 @@ public class TermLongList extends TermNumberList<Long>
       return 0L;
     } else
     {
-      return Long.parseLong(s);
+        // TODO [Greg Bowyer]: This is crappy, we need to work out if the term relates to a field that
+        // is actually a lucene numeric field, there are all sorts of screwball interactions that can occur
+        // here (like the effects of position gaps)
+        try {
+          return Long.parseLong(s);
+        } catch (NumberFormatException nfe) {
+            return NumericUtils.prefixCodedToLong(s);
+        }
     }
   }
 

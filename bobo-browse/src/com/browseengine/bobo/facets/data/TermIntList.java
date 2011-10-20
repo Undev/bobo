@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.apache.lucene.util.NumericUtils;
 
 public class TermIntList extends TermNumberList<Integer>
 {
@@ -22,7 +23,14 @@ public class TermIntList extends TermNumberList<Integer>
       return 0;
     } else
     {
-      return Integer.parseInt(s);
+        // TODO [Greg Bowyer]: This is crappy, we need to work out if the term relates to a field that
+        // is actually a lucene numeric field, there are all sorts of screwball interactions that can occur
+        // here (like the effects of position gaps)
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException nfe) {
+            return NumericUtils.prefixCodedToInt(s);
+        }
     }
   }
 
