@@ -1,7 +1,7 @@
 /**
- * Bobo Browse Engine - High performance faceted/parametric search implementation 
+ * Bobo Browse Engine - High performance faceted/parametric search implementation
  * that handles various types of semi-structured data.  Written in Java.
- * 
+ *
  * Copyright (C) 2005-2006  John Wang
  *
  * This library is free software; you can redistribute it and/or
@@ -17,9 +17,9 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- * 
- * To contact the project administrators for the bobo-browse project, 
- * please go to https://sourceforge.net/projects/bobo-browse/, or 
+ *
+ * To contact the project administrators for the bobo-browse project,
+ * please go to https://sourceforge.net/projects/bobo-browse/, or
  * send mail to owner@browseengine.com.
  */
 
@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -67,7 +68,7 @@ import com.browseengine.bobo.facets.RuntimeFacetHandlerFactory;
 
 /**
  * bobo browse index reader
- * 
+ *
  */
 public class BoboIndexReader extends FilterIndexReader
 {
@@ -86,16 +87,16 @@ public class BoboIndexReader extends FilterIndexReader
   protected BoboIndexReader[] _subReaders = null;
   protected int[] _starts = null;
   private Directory _dir = null;
-  
+
   private final Map<String,Object> _facetDataMap = new HashMap<String,Object>();
   private final ThreadLocal<Map<String,Object>> _runtimeFacetDataMap = new ThreadLocal<Map<String,Object>>()
   {
     protected Map<String,Object> initialValue() { return new HashMap<String,Object>(); }
   };
-  
+
   /**
    * Constructor
-   * 
+   *
    * @param reader
    *          Index reader
    * @throws IOException
@@ -112,7 +113,7 @@ public class BoboIndexReader extends FilterIndexReader
 
   /**
    * Constructor.
-   * 
+   *
    * @param reader
    *          index reader
    * @param facetHandlers
@@ -125,7 +126,7 @@ public class BoboIndexReader extends FilterIndexReader
   {
     return BoboIndexReader.getInstance(reader, facetHandlers, facetHandlerFactories, new WorkArea());
   }
-  
+
   public static BoboIndexReader getInstance(IndexReader reader,
           Collection<FacetHandler<?>> facetHandlers) throws IOException
   {
@@ -155,6 +156,12 @@ public class BoboIndexReader extends FilterIndexReader
   }
 
   public static BoboIndexReader getInstanceAsSubReader(IndexReader reader,
+                                                       Collection<FacetHandler<?>> facetHandlers) throws IOException
+  {
+    return getInstanceAsSubReader(reader, facetHandlers, null, new WorkArea());
+  }
+
+  public static BoboIndexReader getInstanceAsSubReader(IndexReader reader,
                                                        Collection<FacetHandler<?>> facetHandlers,
                                                        Collection<RuntimeFacetHandlerFactory<?,?>> facetHandlerFactories,
                                                        WorkArea workArea) throws IOException
@@ -181,7 +188,7 @@ public class BoboIndexReader extends FilterIndexReader
   {
     return in;
   }
-  
+
   @Override
   public synchronized IndexReader reopen() throws CorruptIndexException,
 		IOException {
@@ -205,7 +212,7 @@ public class BoboIndexReader extends FilterIndexReader
 	  ArrayList<BoboIndexReader> currentReaders = new ArrayList<BoboIndexReader>(size);
 	  boolean isNewReader = false;
 	  for (int i=0;i<size;++i){
-		  SegmentInfo sinfo = (SegmentInfo)sinfos.get(i);
+		  SegmentInfo sinfo = (SegmentInfo)sinfos.info(i);
 		  BoboIndexReader breader = readerMap.remove(sinfo.name);
 		  if (breader!=null){
 			  // should use SegmentReader.reopen
@@ -248,7 +255,7 @@ public class BoboIndexReader extends FilterIndexReader
 	  boolean sameSeg = false;
 	  //get SegmentInfo instance
 	  for (int i=0;i<size;++i){
-		SegmentInfo sinfoTmp = (SegmentInfo)sinfos.get(i);
+		SegmentInfo sinfoTmp = (SegmentInfo)sinfos.info(i);
 		if (sinfoTmp.name.equals(sreader.getSegmentName())){
 		  int numDels2 = sinfoTmp.getDelCount();
 		  sameSeg = numDels==numDels2;
@@ -292,11 +299,11 @@ public class BoboIndexReader extends FilterIndexReader
   public Object getFacetData(String name){
 	  return _facetDataMap.get(name);
   }
-  
+
   public Object putFacetData(String name,Object data){
 	  return _facetDataMap.put(name, data);
   }
-  
+
   public Object getRuntimeFacetData(String name)
   {
     Map<String,Object> map = _runtimeFacetDataMap.get();
@@ -328,7 +335,7 @@ public class BoboIndexReader extends FilterIndexReader
     if(_srcReader != null) _srcReader.close();
     super.doClose();
   }
-  
+
   @Override
   protected void doCommit(Map commitUserData) throws IOException
   {
@@ -340,7 +347,7 @@ public class BoboIndexReader extends FilterIndexReader
   {
     if(_srcReader != null) _srcReader.deleteDocument(n);
   }
-  
+
   private void loadFacetHandler(String name,
                                 Set<String> loaded,
                                 Set<String> visited,
@@ -387,7 +394,7 @@ public class BoboIndexReader extends FilterIndexReader
       loaded.add(name);
     }
   }
-  
+
   private void loadFacetHandlers(WorkArea workArea, Set<String> toBeRemoved)
   {
     Set<String> loaded = new HashSet<String>();
@@ -425,7 +432,7 @@ public class BoboIndexReader extends FilterIndexReader
     ReaderUtil.gatherSubReaders(readerList, reader);
     IndexReader[] subReaders = (IndexReader[])readerList.toArray(new IndexReader[readerList.size()]);
     BoboIndexReader[] boboReaders;
-    
+
     if(subReaders != null && subReaders.length > 0)
     {
       boboReaders = new BoboIndexReader[subReaders.length];
@@ -440,13 +447,13 @@ public class BoboIndexReader extends FilterIndexReader
     }
     return boboReaders;
   }
-  
+
   @Override
   public Directory directory()
   {
     return (_subReaders != null ? _subReaders[0].directory() : super.directory());
   }
-  
+
   private static Collection<FacetHandler<?>> loadFromIndex(File file,WorkArea workArea) throws IOException
   {
    // File springFile = new File(file, SPRING_CONFIG);
@@ -465,9 +472,9 @@ public class BoboIndexReader extends FilterIndexReader
 	  }
 	  
       String absolutePath = file.getAbsolutePath();
-      String partOne = absolutePath.substring(0, absolutePath.lastIndexOf("/"));
-      String partTwo = URLEncoder.encode(absolutePath.substring(absolutePath.lastIndexOf("/") + 1), "UTF-8");
-      absolutePath = partOne + "/" + partTwo;
+      String partOne = absolutePath.substring(0, absolutePath.lastIndexOf(File.separator ));
+      String partTwo = URLEncoder.encode(absolutePath.substring(absolutePath.lastIndexOf(File.separator ) + 1), "UTF-8");
+      absolutePath = partOne + File.separator + partTwo;
       
       File springFile = new File(new File(absolutePath), SPRING_CONFIG);
       appCtx.setConfigLocation("file:" + springFile.getAbsolutePath());
@@ -476,7 +483,7 @@ public class BoboIndexReader extends FilterIndexReader
       return (Collection<FacetHandler<?>>) appCtx.getBean("handlers");
 
   }
-  
+
   protected void initialize(Collection<FacetHandler<?>> facetHandlers) throws IOException
   {
     if (facetHandlers == null) // try to load from index
@@ -493,15 +500,15 @@ public class BoboIndexReader extends FilterIndexReader
         }
         else
         {
-          facetHandlers = new ArrayList<FacetHandler<?>>();
-        }
+        facetHandlers = new ArrayList<FacetHandler<?>>();
+		}
       }
       else
       {
         facetHandlers = new ArrayList<FacetHandler<?>>();
       }
     }
-    
+
     _facetHandlers = facetHandlers;
     _facetHandlerMap = new HashMap<String, FacetHandler<?>>();
     for (FacetHandler<?> facetHandler : facetHandlers)
@@ -511,7 +518,7 @@ public class BoboIndexReader extends FilterIndexReader
   }
 
   /**
-   * 
+   *
    * @param reader
    * @param facetHandlers
    * @param facetHandlerFactories
@@ -526,7 +533,7 @@ public class BoboIndexReader extends FilterIndexReader
     this(reader, facetHandlers, facetHandlerFactories, workArea, true);
     _srcReader = reader;
   }
-  
+
   /**
    * @param reader
    * @param facetHandlers
@@ -543,6 +550,7 @@ public class BoboIndexReader extends FilterIndexReader
                             boolean useSubReaders) throws IOException
   {
     super(useSubReaders ? new MultiReader(createSubReaders(reader, workArea), false) : reader);
+
     if(useSubReaders)
     {
       _dir = reader.directory();
@@ -550,7 +558,7 @@ public class BoboIndexReader extends FilterIndexReader
       if(subReaders != null && subReaders.length > 0)
       {
         _subReaders = subReaders;
-        
+
         int maxDoc = 0;
         _starts = new int[_subReaders.length + 1];
         for (int i = 0; i < _subReaders.length; i++)
@@ -580,13 +588,13 @@ public class BoboIndexReader extends FilterIndexReader
   {
     facetInit(new HashSet<String>());
   }
-  
+
   protected void facetInit(Set<String> toBeRemoved) throws IOException
   {
     initialize(_facetHandlers);
     if(_subReaders == null)
     {
-      loadFacetHandlers(_workArea, toBeRemoved);  
+      loadFacetHandlers(_workArea, toBeRemoved);
     }
     else
     {
@@ -594,7 +602,7 @@ public class BoboIndexReader extends FilterIndexReader
       {
         r.facetInit(toBeRemoved);
       }
-      
+
       for(String name : toBeRemoved)
       {
         _facetHandlerMap.remove(name);
@@ -617,7 +625,7 @@ public class BoboIndexReader extends FilterIndexReader
 
   /**
    * Utility method to dump out all fields (name and terms) for a given index.
-   * 
+   *
    * @param outFile
    *          File to dump to.
    * @throws IOException
@@ -657,7 +665,7 @@ public class BoboIndexReader extends FilterIndexReader
 
   /**
    * Gets all the facet field names
-   * 
+   *
    * @return Set of facet field names
    */
   public Set<String> getFacetNames()
@@ -667,7 +675,7 @@ public class BoboIndexReader extends FilterIndexReader
 
   /**
    * Gets a facet handler
-   * 
+   *
    * @param fieldname
    *          name
    * @return facet handler
@@ -676,8 +684,8 @@ public class BoboIndexReader extends FilterIndexReader
   {
     return _facetHandlerMap.get(fieldname);
   }
-  
-  
+
+
 
   @Override
   public IndexReader[] getSequentialSubReaders() {
@@ -686,7 +694,7 @@ public class BoboIndexReader extends FilterIndexReader
 
 /**
    * Gets the facet handler map
-   * 
+   *
    * @return facet handler map
    */
   public Map<String, FacetHandler<?>> getFacetHandlerMap()
@@ -694,7 +702,7 @@ public class BoboIndexReader extends FilterIndexReader
     return _facetHandlerMap;
   }
 
-  
+
   /**
    * @return the map of RuntimeFacetHandlerFactories
    */
@@ -729,8 +737,16 @@ public class BoboIndexReader extends FilterIndexReader
         String[] vals = facetHandler.getFieldValues(this,docid);
         if (vals != null)
         {
+          String[] values = doc.getValues(facetHandler.getName());
+          Set<String> storedVals = new HashSet<String>(Arrays.asList(values));
+        	
           for (String val : vals)
           {
+        	storedVals.add(val);
+          }
+          doc.removeField(facetHandler.getName());
+          
+          for (String val : storedVals){
             doc.add(new Field(facetHandler.getName(),
                               val,
                               Field.Store.NO,
@@ -741,7 +757,7 @@ public class BoboIndexReader extends FilterIndexReader
       return doc;
     }
   }
-  
+
   private static int readerIndex(int n, int[] starts, int numSubReaders)
   {
     int lo = 0;

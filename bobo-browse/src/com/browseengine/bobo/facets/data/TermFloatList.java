@@ -1,6 +1,7 @@
 package com.browseengine.bobo.facets.data;
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import org.apache.lucene.util.NumericUtils;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -9,22 +10,34 @@ import java.util.List;
 public class TermFloatList extends TermNumberList<Float>
 {
 
-  private float[] _elements = null;
+	protected float[] _elements = null;
 
-  private static float parse(String s)
+  protected float parse(String s)
   {
     if (s == null || s.length() == 0)
     {
       return 0.0f;
     } else
     {
-      return Float.parseFloat(s);
+        // TODO [Greg Bowyer]: This is crappy, we need to work out if the term relates to a field that
+        // is actually a lucene numeric field, there are all sorts of screwball interactions that can occur
+        // here (like the effects of position gaps)
+        try {
+            return Float.parseFloat(s);
+        } catch (NumberFormatException nfe) {
+            return NumericUtils.prefixCodedToFloat(s);
+        }
     }
   }
 
   public TermFloatList()
   {
     super();
+  }
+
+  public TermFloatList(int capacity)
+  {
+    super(capacity);
   }
 
   public TermFloatList(String formatString)

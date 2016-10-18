@@ -21,6 +21,11 @@ public abstract class TermNumberList<T extends Number> extends TermValueList<T>
     setFormatString(formatString);
   }
 
+  protected TermNumberList(int capacity)
+  {
+    super(capacity);
+  }
+
   protected TermNumberList(int capacity, String formatString)
   {
     super(capacity);

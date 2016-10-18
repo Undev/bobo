@@ -7,28 +7,41 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.apache.lucene.util.NumericUtils;
 
 public class TermIntList extends TermNumberList<Integer>
 {
   private static Logger log = Logger.getLogger(TermIntList.class);
-  private int[] _elements = null;
+	protected int[] _elements = null;
   private int sanity = -1;
   private boolean withDummy = true;
 
-  private static int parse(String s)
+	protected int parse(String s)
   {
     if (s == null || s.length() == 0)
     {
       return 0;
     } else
     {
-      return Integer.parseInt(s);
+        // TODO [Greg Bowyer]: This is crappy, we need to work out if the term relates to a field that
+        // is actually a lucene numeric field, there are all sorts of screwball interactions that can occur
+        // here (like the effects of position gaps)
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException nfe) {
+            return NumericUtils.prefixCodedToInt(s);
+        }
     }
   }
 
   public TermIntList()
   {
     super();
+  }
+
+  public TermIntList(int capacity)
+  {
+    super(capacity);
   }
 
   public TermIntList(int capacity, String formatString)

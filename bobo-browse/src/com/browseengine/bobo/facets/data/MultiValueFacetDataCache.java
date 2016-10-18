@@ -22,9 +22,9 @@ import com.browseengine.bobo.sort.DocComparator;
 import com.browseengine.bobo.sort.DocComparatorSource;
 import com.browseengine.bobo.util.BigIntBuffer;
 import com.browseengine.bobo.util.BigNestedIntArray;
-import com.browseengine.bobo.util.StringArrayComparator;
 import com.browseengine.bobo.util.BigNestedIntArray.BufferedLoader;
 import com.browseengine.bobo.util.BigNestedIntArray.Loader;
+import com.browseengine.bobo.util.StringArrayComparator;
 
 /**
  * @author ymatsuda
@@ -98,37 +98,39 @@ public class MultiValueFacetDataCache<T> extends FacetDataCache<T>
           if (term == null || !fieldName.equals(term.field()))
             break;
 
-          String val = term.text();
+					if (!list.skipTerm(term)) {
+						String val = term.text();
 
-          if (val != null)
-          {
-            list.add(val);
+						if (val != null) {
+							list.add(val);
 
-            tdoc.seek(tenum);
-            //freqList.add(tenum.docFreq()); // removed because the df doesn't take into account the num of deletedDocs
-            int df = 0;
-            int minID = -1;
-            int maxID = -1;
-            if(tdoc.next())
-            {
-              df++;
-              int docid = tdoc.doc();
-              if(!loader.add(docid, t)) logOverflow(fieldName);
-              minID = docid;
-              while(tdoc.next())
-              {
-                df++;
-                docid = tdoc.doc();
-                if(!loader.add(docid, t)) logOverflow(fieldName);
-              }
-              maxID = docid;
-            }
-            freqList.add(df);
-            minIDList.add(minID);
-            maxIDList.add(maxID);
+          		tdoc.seek(tenum);
+							// freqList.add(tenum.docFreq()); // removed because the df
+							// doesn't take into account the num of deletedDocs
+							int df = 0;
+							int minID = -1;
+							int maxID = -1;
+							if (tdoc.next()) {
+								df++;
+								int docid = tdoc.doc();
+								if (!loader.add(docid, t))
+									logOverflow(fieldName);
+								minID = docid;
+								while (tdoc.next()) {
+									df++;
+									docid = tdoc.doc();
+									if (!loader.add(docid, t))
+										logOverflow(fieldName);
+								}
+								maxID = docid;
+							}
+							freqList.add(df);
+							minIDList.add(minID);
+							maxIDList.add(maxID);
+						}
+
+          	t++;
           }
-
-          t++;
         }
         while (tenum.next());
       }

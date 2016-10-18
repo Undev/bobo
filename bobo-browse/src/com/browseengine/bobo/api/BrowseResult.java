@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import com.browseengine.bobo.sort.SortCollector;
+
 
 /**
  * A Browse result
@@ -62,7 +64,11 @@ public class BrowseResult implements Serializable{
   }
 
 	private int numHits;
+	private int numGroups;
 	private int totalDocs;
+	private FacetAccessible _groupAccessible;
+  private SortCollector _sortCollector;
+  //private int totalGroups;
 	private Map<String,FacetAccessible> _facetMap;
 	private BrowseHit[] hits;
 	private long time;
@@ -74,11 +80,47 @@ public class BrowseResult implements Serializable{
 	public BrowseResult() {
 		super();
 		_facetMap=new HashMap<String,FacetAccessible>();
+    _groupAccessible = null;
+    _sortCollector = null;
 		numHits=0;
+		numGroups=0;
 		totalDocs=0;
+    //totalGroups=0;
 		hits=null;
 		time=0L;
 	}
+
+  /**
+   * Get the group accessible.
+   * @return the group accessible.
+   */
+  public FacetAccessible getGroupAccessible() {
+    return _groupAccessible;
+  }
+
+  /**
+   * Set the group accessible.
+   * @param groupAccessible the group accessible.
+   */
+  public void setGroupAccessible(FacetAccessible groupAccessible) {
+    _groupAccessible = groupAccessible;
+  }
+
+  /**
+   * Get the sort collector.
+   * @return the sort collector.
+   */
+  public SortCollector getSortCollector() {
+    return _sortCollector;
+  }
+
+  /**
+   * Set the sort collector.
+   * @param sortCollector the sort collector
+   */
+  public void setSortCollector(SortCollector sortCollector) {
+    _sortCollector = sortCollector;
+  }
 	
 	/**
 	 * Get the facets by name
@@ -108,6 +150,24 @@ public class BrowseResult implements Serializable{
 	}
 
 	/**
+	 * Get the group count
+	 * @return group count
+	 * @see #setNumGroups(int)
+	 */
+	public int getNumGroups() {
+		return numGroups;
+	}
+
+	/**
+	 * Sets the group count
+	 * @param groups group count
+	 * @see #getNumGroups()
+	 */
+	public void setNumGroups(int groups) {
+		numGroups = groups;
+	}
+
+	/**
 	 * Gets the total number of docs in the index
 	 * @return total number of docs in the index.
 	 * @see #setTotalDocs(int)
@@ -124,6 +184,24 @@ public class BrowseResult implements Serializable{
 	public void setTotalDocs(int docs) {
 		totalDocs = docs;
 	}
+	
+	/**
+	 * Gets the total number of groups in the index
+	 * @return total number of groups in the index.
+	 * @see #setTotalGroups(int)
+	 */
+	//public int getTotalGroups() {
+		//return totalGroups;
+	//}
+
+	/**
+	 * Sets the total number of groups in the index
+	 * @param groups total number of groups in the index
+	 * @see #getTotalGroups()
+	 */
+	//public void setTotalGroups(int groups) {
+		//totalGroups = groups;
+	//}
 	
 	/**
 	 * Add a container full of choices
@@ -213,6 +291,10 @@ public class BrowseResult implements Serializable{
 	
 	public void close()
 	{
+    if (_groupAccessible != null)
+      _groupAccessible.close();
+    if (_sortCollector != null)
+      _sortCollector.close();
 	  if (_facetMap == null) return;
 	  Collection<FacetAccessible> accessibles = _facetMap.values();
 	  for(FacetAccessible fa : accessibles)

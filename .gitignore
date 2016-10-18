@@ -14,3 +14,15 @@ lib/solr/
 lib/test/
 bobo-browse/MANIFEST.MF
 .settings
+**/*.iml
+**/*.ipr
+**/*.iws
+**/build/
+doc/
+logs/
+tools-build/
+**/out/
+cardemo/cars.war
+bobo-browse/.classpath
+bobo-browse/.project
+
